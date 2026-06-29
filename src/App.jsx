@@ -38,6 +38,10 @@ const MESES = [
 ];
 const labelMonth = (y, m) => `${MESES[m]} ${y}`;
 const monthKey = (y, m) => `bs_exp_${y}_${String(m + 1).padStart(2, "0")}`;
+
+// clave simple de acceso (cambiá estos valores cuando quieras)
+const LOGIN_USER = "vitto";
+const LOGIN_PASS = "mamba";
 // clasifica un gasto como "servicio" (boleta fija) u "otro"
 const SERVICIOS = new Set(["absa", "camuzzi", "edelap", "telecentro"]);
 const SERV_NOTES = new Set(["agua", "gas", "luz", "electricidad", "internet"]);
@@ -146,6 +150,16 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [banner, setBanner] = useState("");
   const [chartCat, setChartCat] = useState("todo"); // todo | servicios | otros
+  const [authed, setAuthed] = useState(() => {
+    try {
+      return localStorage.getItem("bs_auth") === "ok";
+    } catch (e) {
+      return false;
+    }
+  });
+  const [loginU, setLoginU] = useState("");
+  const [loginP, setLoginP] = useState("");
+  const [loginErr, setLoginErr] = useState("");
   const ready = useRef(false);
   const peopleT = useRef();
   const expT = useRef();
@@ -289,6 +303,29 @@ export default function App() {
   const note = (msg) => {
     setFlash(msg);
     setTimeout(() => setFlash(""), 2200);
+  };
+
+  const doLogin = () => {
+    if (
+      loginU.trim().toLowerCase() === LOGIN_USER &&
+      loginP.trim().toLowerCase() === LOGIN_PASS
+    ) {
+      try {
+        localStorage.setItem("bs_auth", "ok");
+      } catch (e) {}
+      setLoginErr("");
+      setAuthed(true);
+    } else {
+      setLoginErr("Usuario o contraseña incorrectos");
+    }
+  };
+  const doLogout = () => {
+    try {
+      localStorage.removeItem("bs_auth");
+    } catch (e) {}
+    setLoginU("");
+    setLoginP("");
+    setAuthed(false);
   };
 
   /* ----------------------------- calc ----------------------------- */
@@ -708,6 +745,40 @@ export default function App() {
     );
   }
 
+  if (!authed) {
+    return (
+      <div className="bs">
+        <style>{CSS}</style>
+        <div className="wrap">
+          <div className="card login">
+            <div className="login-mark">🏠</div>
+            <h2>Cuentas de casa</h2>
+            <p className="muted">Ingresá para ver y editar las cuentas.</p>
+            <input
+              className="login-in"
+              value={loginU}
+              onChange={(ev) => setLoginU(ev.target.value)}
+              placeholder="Usuario"
+              autoComplete="username"
+              onKeyDown={(ev) => ev.key === "Enter" && doLogin()}
+            />
+            <input
+              className="login-in"
+              type="password"
+              value={loginP}
+              onChange={(ev) => setLoginP(ev.target.value)}
+              placeholder="Contraseña"
+              autoComplete="current-password"
+              onKeyDown={(ev) => ev.key === "Enter" && doLogin()}
+            />
+            {loginErr && <p className="login-err">{loginErr}</p>}
+            <button className="login-btn" onClick={doLogin}>Entrar</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading || !people || !expenses) {
     return (
       <div className="bs">
@@ -1056,6 +1127,8 @@ export default function App() {
 
         <footer className="foot">
           Los datos se guardan por mes en esta app. Cambiá de mes con las flechas de arriba.
+          <br />
+          <button className="logout" onClick={doLogout}>Salir</button>
         </footer>
       </div>
 
@@ -1217,6 +1290,16 @@ html,body{margin:0;padding:0;background:#F4F2FB}
 .refresh:active{transform:rotate(180deg);transition:transform .3s ease}
 
 .setup{margin-top:18px}
+.login{margin-top:40px;max-width:340px;margin-left:auto;margin-right:auto;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.login-mark{font-size:34px}
+.login h2{font-family:Fraunces,serif;color:var(--green-d)}
+.login .muted{margin-bottom:6px}
+.login-in{border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:15px;background:var(--paper);color:var(--ink);font-family:inherit}
+.login-btn{border:none;background:var(--green);color:#fff;border-radius:999px;padding:11px;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px}
+.login-btn:hover{background:var(--green-d)}
+.login-err{color:var(--signal);font-size:13px}
+.logout{margin-top:8px;border:1px solid var(--line);background:var(--card);color:var(--soft);border-radius:999px;padding:5px 14px;font-size:12px;cursor:pointer}
+.logout:hover{background:var(--paper)}
 .setup h2{margin-bottom:8px}
 .setup ol{margin:12px 0 6px;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px}
 .setup li{line-height:1.45}
